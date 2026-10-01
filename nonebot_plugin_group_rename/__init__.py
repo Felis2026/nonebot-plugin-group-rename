@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 
-from nonebot import get_driver, logger, on_command, on_message, require
+from nonebot import logger, on_command, on_message, require
 from nonebot.adapters import Event
 from nonebot.adapters.onebot.v11 import ActionFailed, Bot, GroupMessageEvent
+from nonebot.adapters.onebot.v11.permission import GROUP_ADMIN, GROUP_OWNER
 from nonebot.params import CommandArg
-from nonebot.permission import Permission
+from nonebot.permission import SUPERUSER, Permission
 from nonebot.plugin import PluginMetadata
 
 # 持久化目录由 localstore 决定，避免依赖 Bot 的启动工作目录。
@@ -36,6 +37,8 @@ config = load_config(localstore.get_config_file("nonebot_plugin_group_rename", "
 state = GroupState(localstore.get_data_file("nonebot_plugin_group_rename", "groups.json"))
 cooldown = GroupCooldown(config.group_rename_cooldown_seconds)
 group_locks: dict[str, asyncio.Lock] = {}
+# 复用官方判定，兼容纯 ID 与 onebot:ID 两种 SUPERUSER 配置。
+group_management_permission = SUPERUSER | GROUP_ADMIN | GROUP_OWNER
 
 
 def _group_lock(group_id: str) -> asyncio.Lock:
@@ -46,15 +49,12 @@ def _group_lock(group_id: str) -> asyncio.Lock:
     return group_locks[group_id]
 
 
-def _is_group_admin_or_superuser(event: Event) -> bool:
-    """允许当前群管理员、群主及 NoneBot 超级用户管理本群。"""
+async def _is_group_admin_or_superuser(bot: Bot, event: Event) -> bool:
+    """允许当前群管理员、群主及 NoneBot SUPERUSER 管理本群。"""
     if not isinstance(event, GroupMessageEvent):
         return False
-    # OneBot V11 的群内角色只有 owner/admin/member；缺失角色时不放行。
-    return (
-        event.sender.role in {"admin", "owner"}
-        or event.get_user_id() in get_driver().config.superusers
-    )
+    # SUPERUSER 本身也允许私聊，必须先收紧到群消息，再检查身份。
+    return await group_management_permission(bot, event)
 
 
 def _message_trigger(event: GroupMessageEvent) -> str | None:
@@ -66,13 +66,13 @@ def _message_trigger(event: GroupMessageEvent) -> str | None:
     return message_trigger(segments, config.group_rename_ignore_patterns)
 
 
-def _is_rename_message(event: Event) -> bool:
+async def _is_rename_message(bot: Bot, event: Event) -> bool:
     """只让已启用群的有效车牌消息进入改名处理。"""
     if not isinstance(event, GroupMessageEvent):
         return False
     if not state.is_enabled(str(event.group_id)):
         return False
-    if config.group_rename_admin_only and not _is_group_admin_or_superuser(event):
+    if config.group_rename_admin_only and not await _is_group_admin_or_superuser(bot, event):
         return False
     return _message_trigger(event) is not None
 
@@ -101,7 +101,7 @@ group_rename_command = on_command(
 
 @group_rename_command.handle()
 async def handle_group_rename_command(event: GroupMessageEvent, args=CommandArg()) -> None:
-    """群管理员、群主或超级用户管理当前群的插件开关。"""
+    """群管理员、群主或 SUPERUSER 管理当前群的插件开关。"""
     action = args.extract_plain_text().strip().lower()
     group_id = str(event.group_id)
     if action == "status":
@@ -141,7 +141,7 @@ async def handle_rename(bot: Bot, event: GroupMessageEvent) -> None:
         # 匹配到执行之间可能关闭群开关或改动权限，必须再次检查。
         if not state.is_enabled(group_id):
             return
-        if config.group_rename_admin_only and not _is_group_admin_or_superuser(event):
+        if config.group_rename_admin_only and not await _is_group_admin_or_superuser(bot, event):
             return
         if not cooldown.allow(group_id):
             if config.group_rename_enable_notify:

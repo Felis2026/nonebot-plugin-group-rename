@@ -87,6 +87,8 @@ nonebot.load_plugin("nonebot_plugin_group_rename")
 | `12345` | 默认群成员；开启管理员限制后仅上述管理员 | 将 `12345` 设置为群名车牌 |
 | `清空` | 默认群成员；开启管理员限制后仅上述管理员 | 从群名移除旧车牌 |
 
+SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 `onebot:ID` 两种写法；群开关命令仍只在群内生效。
+
 ### 改名前后举例
 
 | 原群名 | 群消息 | 修改后 | 原因 |
@@ -133,6 +135,7 @@ nonebot.load_plugin("nonebot_plugin_group_rename")
 
 ### 未发布
 
+- SUPERUSER 权限兼容纯 ID 和 `onebot:ID`，群开关和管理员模式使用同一套官方权限判定。
 - 测试使用无服务器驱动，增加 CI 与发布前测试门禁，构建依赖下限修正为 setuptools 77。
 
 ### 0.1.0
