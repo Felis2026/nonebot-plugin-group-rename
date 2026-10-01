@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Test and build (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.14']
+    env:
+      LOCALSTORE_CONFIG_DIR: ${{ runner.temp }}/group-rename-tests/config
+      LOCALSTORE_DATA_DIR: ${{ runner.temp }}/group-rename-tests/data
+      LOCALSTORE_CACHE_DIR: ${{ runner.temp }}/group-rename-tests/cache
+    steps:
+      # ================================ 依赖与回归测试 ================================ #
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        # 77.0.0 未发布到 PyPI；77.0.1 是 >=77 范围内的最低可安装版本。
+        run: python -m pip install . build wheel 'setuptools==77.0.1'
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      # ================================ 最低构建版本与安装包加载 ================================ #
+      - name: Build distributions
+        run: python -m build --no-isolation --sdist --wheel --outdir dist/
+      - name: Load installed wheel
+        # 离开源码目录，并将安装包目录放到最前，验证发布包而非工作区源码。
+        run: |
+          python -m pip install --no-deps --target "${RUNNER_TEMP}/group-rename-installed" dist/*.whl
+          cd "$RUNNER_TEMP"
+          PYTHONPATH="${RUNNER_TEMP}/group-rename-installed" python -c "import nonebot; nonebot.init(driver='~none'); plugin = nonebot.load_plugin('nonebot_plugin_group_rename'); assert plugin is not None"

@@ -12,7 +12,7 @@ from nonebot.adapters.onebot.v11 import ActionFailed
 try:
     nonebot.get_driver()
 except ValueError:
-    nonebot.init()
+    nonebot.init(driver="~none")
 
 from nonebot_plugin_group_rename.logic import GroupCooldown
 

@@ -10,7 +10,7 @@ from pydantic import ValidationError
 try:
     nonebot.get_driver()
 except ValueError:
-    nonebot.init()
+    nonebot.init(driver="~none")
 
 from nonebot_plugin_group_rename.logic import (
     GroupCooldown,

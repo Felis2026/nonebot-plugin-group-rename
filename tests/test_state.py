@@ -10,7 +10,7 @@ import nonebot
 try:
     nonebot.get_driver()
 except ValueError:
-    nonebot.init()
+    nonebot.init(driver="~none")
 
 from nonebot_plugin_group_rename.state import GroupState
 

@@ -131,6 +131,10 @@ nonebot.load_plugin("nonebot_plugin_group_rename")
 
 ## 📋 版本记录
 
+### 未发布
+
+- 测试使用无服务器驱动，增加 CI 与发布前测试门禁，构建依赖下限修正为 setuptools 77。
+
 ### 0.1.0
 
 - 支持 OneBot V11 群内发送连续五位数字更新群名，发送“清空”移除旧号码；@、图片和回复可与号码同条发送。

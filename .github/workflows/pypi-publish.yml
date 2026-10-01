@@ -10,8 +10,13 @@ permissions:
   contents: read
 
 jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
   pypi-publish:
     name: Upload release to PyPI
+    # 标签与手动发布都先跑相同的测试和构建检查，失败时不执行上传。
+    needs: checks
     runs-on: ubuntu-latest
     steps:
       # ================================ 构建发行包 ================================ #

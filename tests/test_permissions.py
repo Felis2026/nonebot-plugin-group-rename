@@ -11,7 +11,7 @@ from nonebot.rule import CommandRule
 try:
     nonebot.get_driver()
 except ValueError:
-    nonebot.init()
+    nonebot.init(driver="~none")
 
 from nonebot.adapters.onebot.v11 import GroupMessageEvent
 
