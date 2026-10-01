@@ -19,7 +19,7 @@ import nonebot_plugin_localstore as localstore
 
 from .config import Config, load_config
 from .logic import GroupCooldown, build_group_name, message_trigger
-from .state import GroupState
+from .state import GroupState, StateLoadError
 
 
 __plugin_meta__ = PluginMetadata(
@@ -105,6 +105,9 @@ async def handle_group_rename_command(event: GroupMessageEvent, args=CommandArg(
     action = args.extract_plain_text().strip().lower()
     group_id = str(event.group_id)
     if action == "status":
+        if state.load_failed:
+            await group_rename_command.send("改群名群开关数据异常，请联系维护者修复")
+            return
         enabled = state.is_enabled(group_id)
         await group_rename_command.send("改群名：已开启" if enabled else "改群名：已关闭")
         return
@@ -116,6 +119,10 @@ async def handle_group_rename_command(event: GroupMessageEvent, args=CommandArg(
     async with _group_lock(group_id):
         try:
             changed = await state.set_enabled(group_id, action == "on")
+        except StateLoadError as exc:
+            logger.error(f"无法修改群 {group_id} 的改群名开关: {exc}")
+            await group_rename_command.send("改群名群开关数据异常，请联系维护者修复")
+            return
         except OSError as exc:
             logger.error(f"保存群 {group_id} 的改群名开关失败: {exc}")
             await group_rename_command.send("改群名开关保存失败")

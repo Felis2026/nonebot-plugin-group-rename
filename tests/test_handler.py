@@ -2,12 +2,14 @@
 
 import asyncio
 import importlib
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import nonebot
-from nonebot.adapters.onebot.v11 import ActionFailed
+from nonebot.adapters.onebot.v11 import ActionFailed, Message
 
 try:
     nonebot.get_driver()
@@ -15,6 +17,7 @@ except ValueError:
     nonebot.init(driver="~none")
 
 from nonebot_plugin_group_rename.logic import GroupCooldown
+from nonebot_plugin_group_rename.state import GroupState
 
 
 plugin = importlib.import_module("nonebot_plugin_group_rename")
@@ -39,6 +42,8 @@ class FakeBot:
 
 
 class RenameHandlerTests(unittest.IsolatedAsyncioTestCase):
+    # ================================ 同群串行与无变化处理 ================================ #
+
     async def test_same_group_reads_latest_name_serially(self) -> None:
         bot = FakeBot()
         state = SimpleNamespace(is_enabled=lambda group_id: group_id == "1")
@@ -101,6 +106,20 @@ class RenameHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(bot.set_names, [expected_name])
 
     # ================================ 异常提示 ================================ #
+
+    async def test_group_commands_report_corrupt_state_without_overwriting_file(self) -> None:
+        """状态损坏时，查看、开启和关闭都明确报错，且保留原文件。"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "groups.json"
+            path.write_text("broken", encoding="utf-8")
+            state = GroupState(path)
+            send = AsyncMock()
+            with patch.object(plugin, "state", state), patch.object(plugin.group_rename_command, "send", send):
+                for action in ("status", "on", "off"):
+                    await plugin.handle_group_rename_command(SimpleNamespace(group_id=1), Message(action))
+            self.assertEqual(send.await_count, 3)
+            self.assertTrue(all(call.args == ("改群名群开关数据异常，请联系维护者修复",) for call in send.await_args_list))
+            self.assertEqual(path.read_text(encoding="utf-8"), "broken")
 
     async def test_read_failures_report_the_failed_step(self) -> None:
         """读取 API 失败或缺少群名时，不将问题误报成改名权限失败。"""

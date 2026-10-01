@@ -129,6 +129,8 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 
 群开关状态另存在 `nonebot-plugin-localstore` 管理的数据目录下的 `groups.json`，不与参数配置混用；换设备时复制该状态文件，或在目标群重新执行 `/group_rename on`。
 
+如果启动时群开关文件无法读取，插件会关闭所有群并禁止修改开关，保留原文件；修复文件后重启 Bot 恢复使用。
+
 ---
 
 ## 📋 版本记录
@@ -136,6 +138,7 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 ### 未发布
 
 - SUPERUSER 权限兼容纯 ID 和 `onebot:ID`，群开关和管理员模式使用同一套官方权限判定。
+- 群开关文件读取失败时保留原文件并禁止写入，避免后续操作覆盖群记录。
 - 测试使用无服务器驱动，增加 CI 与发布前测试门禁，构建依赖下限修正为 setuptools 77。
 
 ### 0.1.0
