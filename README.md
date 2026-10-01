@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python >= 3.10">
     <img src="https://img.shields.io/badge/NoneBot-2.4.4%2B-black" alt="NoneBot >= 2.4.4">
     <img src="https://img.shields.io/badge/Adapter-OneBot%20V11-orange" alt="OneBot V11">
-    <img src="https://img.shields.io/badge/Version-0.1.0-ff69b4" alt="Version 0.1.0">
+    <img src="https://img.shields.io/badge/Version-0.1.1-ff69b4" alt="Version 0.1.1">
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License"></a>
   </p>
 
@@ -135,7 +135,7 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 
 ## 📋 版本记录
 
-### 未发布
+### 0.1.1
 
 - SUPERUSER 权限兼容纯 ID 和 `onebot:ID`，群开关和管理员模式使用同一套官方权限判定。
 - 新车牌仅接受五位 ASCII 数字；保留旧群名的数字清理规则。

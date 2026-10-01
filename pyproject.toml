@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nonebot-plugin-group-rename"
-version = "0.1.0"
+version = "0.1.1"
 description = "适用于 PJSK、BanG Dream! 等五位房间号固车群的 NoneBot2 改群名插件，按群启用后通过群消息自动更新或清空群名车牌"
 authors = [{ name = "Felis", email = "3397152010@qq.com" }]
 maintainers = [{ name = "Felis", email = "3397152010@qq.com" }]
