@@ -151,7 +151,7 @@ async def handle_rename(bot: Bot, event: GroupMessageEvent) -> None:
         if config.group_rename_admin_only and not await _is_group_admin_or_superuser(bot, event):
             return
         if not cooldown.allow(group_id):
-            if config.group_rename_enable_notify:
+            if config.group_rename_enable_notify and cooldown.allow_notice(group_id):
                 await rename_matcher.send("⏳改名太频繁，请稍后再试")
             return
 

@@ -42,6 +42,37 @@ class FakeBot:
 
 
 class RenameHandlerTests(unittest.IsolatedAsyncioTestCase):
+    # ================================ 冷却提示限频 ================================ #
+
+    async def test_cooldown_notice_is_once_per_group_and_resets_for_next_operation(self) -> None:
+        """连续车牌只提示一次，不影响其他群；下一次有效操作会开启新的提示周期。"""
+        bot = FakeBot()
+        cooldown = GroupCooldown(60)
+        send = AsyncMock()
+        with (
+            patch.object(plugin, "state", SimpleNamespace(is_enabled=lambda group_id: True)),
+            patch.object(plugin, "cooldown", cooldown),
+            patch.object(plugin, "_message_trigger", lambda event: event.trigger),
+            patch.object(plugin.rename_matcher, "send", send),
+        ):
+            await plugin.handle_rename(bot, SimpleNamespace(group_id=1, trigger="12345"))
+            for _ in range(10):
+                await plugin.handle_rename(bot, SimpleNamespace(group_id=1, trigger="67890"))
+            self.assertEqual(send.await_count, 1)
+            self.assertEqual(bot.set_names, ["12345 讨论群"])
+
+            await plugin.handle_rename(bot, SimpleNamespace(group_id=2, trigger="67890"))
+            for _ in range(3):
+                await plugin.handle_rename(bot, SimpleNamespace(group_id=2, trigger="54321"))
+            self.assertEqual(send.await_count, 2)
+
+            cooldown.last_by_group["1"] -= 61
+            await plugin.handle_rename(bot, SimpleNamespace(group_id=1, trigger="54321"))
+            await plugin.handle_rename(bot, SimpleNamespace(group_id=1, trigger="98765"))
+            self.assertEqual(send.await_count, 3)
+            self.assertEqual(bot.set_names, ["12345 讨论群", "67890 讨论群", "54321 讨论群"])
+            self.assertTrue(all(call.args == ("⏳改名太频繁，请稍后再试",) for call in send.await_args_list))
+
     # ================================ 同群串行与无变化处理 ================================ #
 
     async def test_same_group_reads_latest_name_serially(self) -> None:
