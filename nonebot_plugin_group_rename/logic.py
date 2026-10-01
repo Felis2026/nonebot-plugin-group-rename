@@ -7,8 +7,9 @@ import time
 from collections.abc import Iterable
 
 
-# 车牌必须是连续五位；旧群名中的五位及以上数字按整段删除。
-DIGIT_PATTERN = re.compile(r"^\d{5}$")
+# 游戏房间号只接受 ASCII 数字，避免 Unicode 数字绕过精确匹配的忽略列表。
+DIGIT_PATTERN = re.compile(r"^[0-9]{5}$")
+# 旧群名继续清理所有连续五位及以上数字，包括旧版可能写入的全角数字。
 OLD_NUMBER_PATTERN = re.compile(r"\d{5,}")
 
 
