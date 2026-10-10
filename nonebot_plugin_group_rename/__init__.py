@@ -95,7 +95,7 @@ group_rename_command = on_command(
     "group_rename",
     aliases={"改群名"},
     permission=Permission(_is_group_admin_or_superuser),
-    priority=1,
+    priority=config.group_rename_priority,
     block=False,
 )
 
@@ -134,7 +134,9 @@ async def handle_group_rename_command(event: GroupMessageEvent, args=CommandArg(
 
 # ================================ 群名修改 ================================ #
 
-rename_matcher = on_message(rule=_is_rename_message, priority=1, block=False)
+rename_matcher = on_message(
+    rule=_is_rename_message, priority=config.group_rename_priority, block=False
+)
 
 
 @rename_matcher.handle()

@@ -19,6 +19,7 @@ class _ConfigValues(BaseModel):
     group_rename_admin_only: bool = False
     group_rename_ignore_patterns: list[str] = Field(default_factory=list)
     group_rename_cooldown_seconds: float = Field(default=1, ge=0)
+    group_rename_priority: int = Field(default=1, ge=0)
 
 
 # 根插件已 require(localstore)；路径只获取一次，不依赖 Bot 的启动目录。

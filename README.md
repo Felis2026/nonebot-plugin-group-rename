@@ -122,17 +122,20 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 | `group_rename_admin_only` | `false` | 开启后仅允许群管理员、群主或 SUPERUSER 通过车牌消息触发改名 |
 | `group_rename_ignore_patterns` | `[]` | 忽略的五位数字，使用 JSON 数组 |
 | `group_rename_cooldown_seconds` | `1` | 每群改名尝试的冷却秒数 |
+| `group_rename_priority` | `1` | 群开关命令与自动改名的响应优先级，非负整数；数值越小越先处理 |
 
 例如，在 `config.json` 中只填写需要覆盖的参数：
 
 ```json
 {
   "group_rename_admin_only": true,
-  "group_rename_ignore_patterns": ["12345", "99999"]
+  "group_rename_ignore_patterns": ["12345", "99999"],
+  "group_rename_priority": 1
 }
 ```
 
 例如 JSON 将冷却设为 `10` 秒，同时 NoneBot 显式配置设为 `30` 秒，最终使用 `30` 秒。
+插件不主动阻断后续消息处理；若前面的其他插件阻断消息，本插件可能无法收到该消息，可按宿主需求调整优先级。
 
 群开关状态另存在 `nonebot-plugin-localstore` 管理的数据目录下的 `groups.json`，不与参数配置混用；换设备时复制该状态文件，或在目标群重新执行 `/group_rename on`。
 
@@ -146,6 +149,7 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 
 - 兼容 Pydantic v1、v2，并为两版环境增加 CI 测试。
 - 通过 NoneBot 标准配置入口合并参数，保留独立 JSON；宿主显式配置优先。
+- 群开关命令与自动改名支持配置响应优先级，默认处理顺序不变。
 
 ### 0.1.1
 

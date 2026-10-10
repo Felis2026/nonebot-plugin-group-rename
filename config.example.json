@@ -3,5 +3,6 @@
   "group_rename_enable_notify": true,
   "group_rename_admin_only": false,
   "group_rename_ignore_patterns": [],
-  "group_rename_cooldown_seconds": 1
+  "group_rename_cooldown_seconds": 1,
+  "group_rename_priority": 1
 }
