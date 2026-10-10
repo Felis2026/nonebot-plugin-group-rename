@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import nonebot
 from nonebot.rule import CommandRule
+from nonebot.compat import model_dump, type_validate_python
 
 try:
     nonebot.get_driver()
@@ -22,7 +23,8 @@ plugin = importlib.import_module("nonebot_plugin_group_rename")
 
 def group_event(role: str, user_id: int = 2) -> GroupMessageEvent:
     """构造包含 OneBot 群角色和有效车牌消息的真实事件模型。"""
-    return GroupMessageEvent.model_validate(
+    return type_validate_python(
+        GroupMessageEvent,
         {
             "time": 1,
             "self_id": 9,
@@ -93,10 +95,10 @@ class PermissionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_superuser_cannot_manage_group_switch_in_private_chat(self) -> None:
         """复用 SUPERUSER 后仍须拒绝私聊，避免把群开关命令的范围扩大。"""
-        data = group_event("member", user_id=99).model_dump()
+        data = model_dump(group_event("member", user_id=99))
         data.pop("group_id")
         data.update(message_type="private", sub_type="friend")
-        event = PrivateMessageEvent.model_validate(data)
+        event = type_validate_python(PrivateMessageEvent, data)
         with patch.object(self.driver.config, "superusers", {"onebot:99"}):
             self.assertFalse(await plugin.group_rename_command.permission(self.bot, event))
             self.assertFalse(await plugin._is_rename_message(self.bot, event))

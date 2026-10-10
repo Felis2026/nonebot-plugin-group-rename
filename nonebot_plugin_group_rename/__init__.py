@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 
-from nonebot import logger, on_command, on_message, require
+from nonebot import get_plugin_config, logger, on_command, on_message, require
 from nonebot.adapters import Event
 from nonebot.adapters.onebot.v11 import ActionFailed, Bot, GroupMessageEvent
 from nonebot.adapters.onebot.v11.permission import GROUP_ADMIN, GROUP_OWNER
@@ -17,7 +17,7 @@ from nonebot.plugin import PluginMetadata
 require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as localstore
 
-from .config import Config, load_config
+from .config import Config
 from .logic import GroupCooldown, build_group_name, message_trigger
 from .state import GroupState, StateLoadError
 
@@ -32,7 +32,8 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters={"~onebot.v11"},
 )
 
-config = load_config(localstore.get_config_file("nonebot_plugin_group_rename", "config.json"))
+# 启动时只合并一次配置，命令与自动改名共用同一份参数快照。
+config = get_plugin_config(Config)
 # 显式指定插件名，使数据目录不依赖当前模块的调用上下文。
 state = GroupState(localstore.get_data_file("nonebot_plugin_group_rename", "groups.json"))
 cooldown = GroupCooldown(config.group_rename_cooldown_seconds)

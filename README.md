@@ -50,6 +50,7 @@
 - Python `>= 3.10`
 - NoneBot `>= 2.4.4`
 - OneBot V11 适配器
+- Pydantic `>= 1.10.0, < 3.0.0`（兼容 v1、v2）
 - 机器人账号具备修改目标群名称的权限
 
 将仓库放到 Bot 设备上，在该 Bot 的 Python 环境中运行：
@@ -107,10 +108,14 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 
 ## ⚙️ 配置
 
-不写配置文件即可使用默认参数，群开关仍默认关闭。
-配置文件由 `nonebot-plugin-localstore` 管理。
+不填写参数即可使用默认值，群开关仍默认关闭。
+可继续使用 `nonebot-plugin-localstore` 管理的 `config.json`，也可通过 NoneBot 标准配置入口提供同名参数。
+只使用 JSON 时无需填写 `.env`。
 
-| JSON 参数 | 默认值 | 说明 |
+配置优先级：**NoneBot 显式配置 > JSON 配置文件 > 插件默认值**。
+参数在启动时读取，修改后需重启 Bot；JSON 格式错误、未知字段或非法参数会阻止插件加载，并记录具体错误。
+
+| 参数 | 默认值 | 说明 |
 | --- | --- | --- |
 | `group_rename_max_length` | `30` | 目标群名的最长字符数，最小为 `5` |
 | `group_rename_enable_notify` | `true` | 冷却、读取或修改群名失败、仅剩车牌无法清空时发送提示 |
@@ -127,6 +132,8 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 }
 ```
 
+例如 JSON 将冷却设为 `10` 秒，同时 NoneBot 显式配置设为 `30` 秒，最终使用 `30` 秒。
+
 群开关状态另存在 `nonebot-plugin-localstore` 管理的数据目录下的 `groups.json`，不与参数配置混用；换设备时复制该状态文件，或在目标群重新执行 `/group_rename on`。
 
 如果启动时群开关文件无法读取，插件会关闭所有群并禁止修改开关，保留原文件；修复文件后重启 Bot 恢复使用。
@@ -134,6 +141,11 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 ---
 
 ## 📋 版本记录
+
+### 未发布
+
+- 兼容 Pydantic v1、v2，并为两版环境增加 CI 测试。
+- 通过 NoneBot 标准配置入口合并参数，保留独立 JSON；宿主显式配置优先。
 
 ### 0.1.1
 

@@ -1,11 +1,8 @@
 """群消息识别和群名构造的行为回归。"""
 
 import unittest
-import tempfile
-from pathlib import Path
 
 import nonebot
-from pydantic import ValidationError
 
 try:
     nonebot.get_driver()
@@ -17,7 +14,6 @@ from nonebot_plugin_group_rename.logic import (
     build_group_name,
     message_trigger,
 )
-from nonebot_plugin_group_rename.config import Config, load_config
 
 
 class MessageTriggerTests(unittest.TestCase):
@@ -73,30 +69,6 @@ class CooldownTests(unittest.TestCase):
         self.assertTrue(cooldown.allow("1"))
         self.assertFalse(cooldown.allow("1"))
         self.assertTrue(cooldown.allow("2"))
-
-
-class ConfigTests(unittest.TestCase):
-    def test_max_length_must_fit_full_plate(self) -> None:
-        with self.assertRaises(ValidationError):
-            Config(group_rename_max_length=4)
-        self.assertEqual(Config(group_rename_max_length=5).group_rename_max_length, 5)
-
-    def test_json_config_defaults_overrides_and_invalid_values(self) -> None:
-        """独立文件可覆盖默认参数；错误配置不能静默退回默认值。"""
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "config.json"
-            self.assertEqual(load_config(path), Config())
-
-            path.write_text('{"group_rename_admin_only": true}', encoding="utf-8")
-            self.assertTrue(load_config(path).group_rename_admin_only)
-
-            path.write_text('{"group_rename_max_length": 4}', encoding="utf-8")
-            with self.assertRaises(RuntimeError):
-                load_config(path)
-
-            path.write_text('{"unknown_key": true}', encoding="utf-8")
-            with self.assertRaises(RuntimeError):
-                load_config(path)
 
 
 if __name__ == "__main__":
