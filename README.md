@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python >= 3.10">
     <img src="https://img.shields.io/badge/NoneBot-2.4.4%2B-black" alt="NoneBot >= 2.4.4">
     <img src="https://img.shields.io/badge/Adapter-OneBot%20V11-orange" alt="OneBot V11">
-    <img src="https://img.shields.io/badge/Version-0.1.1-ff69b4" alt="Version 0.1.1">
+    <img src="https://img.shields.io/badge/Version-0.1.2-ff69b4" alt="Version 0.1.2">
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License"></a>
   </p>
 
@@ -145,7 +145,7 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 
 ## 📋 版本记录
 
-### 未发布
+### 0.1.2
 
 - 兼容 Pydantic v1、v2，并为两版环境增加 CI 测试。
 - 通过 NoneBot 标准配置入口合并参数，保留独立 JSON；宿主显式配置优先。
