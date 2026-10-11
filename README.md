@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python >= 3.10">
     <img src="https://img.shields.io/badge/NoneBot-2.4.4%2B-black" alt="NoneBot >= 2.4.4">
     <img src="https://img.shields.io/badge/Adapter-OneBot%20V11-orange" alt="OneBot V11">
-    <img src="https://img.shields.io/badge/Version-0.1.3-ff69b4" alt="Version 0.1.3">
+    <img src="https://img.shields.io/badge/Version-0.1.4-ff69b4" alt="Version 0.1.4">
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License"></a>
   </p>
 
@@ -146,6 +146,11 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 ---
 
 ## 📋 版本记录
+
+### 0.1.4
+
+- 修复保存群开关时任务被取消，内存与文件状态不一致的问题。
+- 整理代码注释。
 
 ### 0.1.3
 

@@ -68,6 +68,16 @@ class GroupState:
                 updated.add(group_id)
             else:
                 updated.remove(group_id)
-            await asyncio.to_thread(self._write, updated)
+            # 取消协程不会停止线程写入，写入完成并同步内存后再释放锁。
+            write_future = asyncio.get_running_loop().run_in_executor(None, self._write, updated)
+            cancellation = None
+            while True:
+                try:
+                    await asyncio.shield(write_future)
+                    break
+                except asyncio.CancelledError as exc:
+                    cancellation = exc
             self.enabled_groups = updated
+            if cancellation is not None:
+                raise cancellation
             return True

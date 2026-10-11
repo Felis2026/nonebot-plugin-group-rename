@@ -1,7 +1,9 @@
 """群开关文件在重启和并发修改后的持久化验证。"""
 
+import asyncio
 import json
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -30,14 +32,86 @@ class GroupStateTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(GroupState(path).is_enabled("100"))
 
     async def test_concurrent_groups_do_not_overwrite(self) -> None:
-        import asyncio
-
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "groups.json"
             state = GroupState(path)
             await asyncio.gather(*(state.set_enabled(str(i), True) for i in range(20)))
             saved = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(set(saved["enabled_groups"]), {str(i) for i in range(20)})
+
+    # ================================ 保存任务取消 ================================ #
+
+    async def test_cancelled_save_finishes_before_next_toggle(self) -> None:
+        """保存被重复取消时，等待写入完成，再允许关闭同群或修改其他群。"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "groups.json"
+            state = GroupState(path)
+            await state.set_enabled("99", True)
+            started, release = threading.Event(), threading.Event()
+            original_write = state._write
+
+            def delayed_write(groups: set[str]) -> None:
+                """暂停首次写入，在实际工作线程运行期间触发取消。"""
+                if "100" in groups:
+                    started.set()
+                    if not release.wait(5):
+                        raise TimeoutError("测试写入未释放")
+                original_write(groups)
+
+            with patch.object(state, "_write", delayed_write):
+                saving = asyncio.create_task(state.set_enabled("100", True))
+                pending = []
+                try:
+                    self.assertTrue(await asyncio.to_thread(started.wait, 2))
+                    for _ in range(2):
+                        saving.cancel()
+                        await asyncio.sleep(0)
+                    self.assertFalse(saving.done())
+                    pending = [
+                        asyncio.create_task(state.set_enabled("100", False)),
+                        asyncio.create_task(state.set_enabled("200", True)),
+                    ]
+                    await asyncio.sleep(0)
+                    self.assertTrue(all(not task.done() for task in pending))
+                finally:
+                    release.set()
+                    # 测试断言失败时也收尾线程，避免临时目录被后台写入占用。
+                    results = await asyncio.gather(saving, *pending, return_exceptions=True)
+                self.assertIsInstance(results[0], asyncio.CancelledError)
+                self.assertEqual(results[1:], [True, True])
+            self.assertEqual(state.enabled_groups, {"99", "200"})
+            self.assertEqual(GroupState(path).enabled_groups, {"99", "200"})
+
+    async def test_cancelled_failed_save_keeps_original_state(self) -> None:
+        """被取消的保存最终失败时，保留原状态并允许下一次保存。"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "groups.json"
+            state = GroupState(path)
+            await state.set_enabled("99", True)
+            started, release = threading.Event(), threading.Event()
+
+            def failed_write(groups: set[str]) -> None:
+                """在线程写入期间暂停，随后模拟文件访问失败。"""
+                started.set()
+                if not release.wait(5):
+                    raise TimeoutError("测试写入未释放")
+                raise PermissionError("denied")
+
+            with patch.object(state, "_write", failed_write):
+                saving = asyncio.create_task(state.set_enabled("100", True))
+                try:
+                    self.assertTrue(await asyncio.to_thread(started.wait, 2))
+                    saving.cancel()
+                    await asyncio.sleep(0)
+                    self.assertFalse(saving.done())
+                finally:
+                    release.set()
+                    result, = await asyncio.gather(saving, return_exceptions=True)
+                self.assertIsInstance(result, PermissionError)
+            self.assertEqual(state.enabled_groups, {"99"})
+            self.assertEqual(GroupState(path).enabled_groups, {"99"})
+            self.assertTrue(await state.set_enabled("200", True))
+            self.assertEqual(GroupState(path).enabled_groups, {"99", "200"})
 
     # ================================ 损坏文件保护与恢复 ================================ #
 
