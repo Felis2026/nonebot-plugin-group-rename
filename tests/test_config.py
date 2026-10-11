@@ -18,6 +18,8 @@ try:
 except ValueError:
     nonebot.init(driver="~none")
 
+# 通过框架注册插件，localstore 才能识别调用方及其专属目录。
+nonebot.require("nonebot_plugin_group_rename")
 config_module = importlib.import_module("nonebot_plugin_group_rename.config")
 Config = config_module.Config
 
@@ -96,29 +98,71 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(Config(group_rename_priority=0).group_rename_priority, 0)
 
 
-# ================================ 启动时响应器注册 ================================ #
+# ================================ 启动时响应器与存储路径 ================================ #
 
 
 class MatcherConfigTests(unittest.TestCase):
-    def _check_startup(self, host: dict, file_data: dict, expected_priority: int) -> None:
-        """用新进程加载真实插件，避免重载时残留响应器干扰优先级验证。"""
+    def _check_startup(
+        self, host: dict, file_data: dict, expected_priority: int,
+        plugin_directories: bool = False,
+        dotenv_priority: int | None = None,
+        environment_priority: int | None = None,
+    ) -> None:
+        """在新进程验证插件配置、响应器及默认或专属目录中的状态读写。"""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            default_config_dir = root / "config" / "nonebot_plugin_group_rename"
+            default_data_dir = root / "data" / "nonebot_plugin_group_rename"
+            config_dir = root / "custom-config" if plugin_directories else default_config_dir
+            data_dir = root / "custom-data" if plugin_directories else default_data_dir
+            config_dir.mkdir(parents=True)
+            data_dir.mkdir(parents=True)
+            # 启动前准备文件，用实际读写证明新接口仍能读取原有群记录。
+            (config_dir / "config.json").write_text(json.dumps(file_data), encoding="utf-8")
+            (data_dir / "groups.json").write_text(
+                json.dumps({"enabled_groups": ["100"]}), encoding="utf-8"
+            )
+            if plugin_directories:
+                default_config_dir.mkdir(parents=True)
+                default_data_dir.mkdir(parents=True)
+                (default_config_dir / "config.json").write_text(
+                    '{"group_rename_priority": 0}', encoding="utf-8"
+                )
+                (default_data_dir / "groups.json").write_text(
+                    '{"enabled_groups": ["999"]}', encoding="utf-8"
+                )
             env = {
                 **os.environ,
                 "PYTHONUTF8": "1",
                 "LOCALSTORE_CONFIG_DIR": str(root / "config"),
                 "LOCALSTORE_DATA_DIR": str(root / "data"),
                 "LOCALSTORE_CACHE_DIR": str(root / "cache"),
+                "LOCALSTORE_PLUGIN_CONFIG_DIR": json.dumps(
+                    {"nonebot_plugin_group_rename": str(config_dir)} if plugin_directories else {}
+                ),
+                "LOCALSTORE_PLUGIN_DATA_DIR": json.dumps(
+                    {"nonebot_plugin_group_rename": str(data_dir)} if plugin_directories else {}
+                ),
             }
+            # 使用真实配置来源，避免直接传参的测试漏掉宿主加载器的优先级。
+            host = dict(host)
+            env.pop("GROUP_RENAME_PRIORITY", None)
+            if dotenv_priority is not None:
+                dotenv_file = root / "bot.env"
+                dotenv_file.write_text(
+                    f"GROUP_RENAME_PRIORITY={dotenv_priority}\n", encoding="utf-8"
+                )
+                host["_env_file"] = str(dotenv_file)
+            else:
+                host["_env_file"] = None
+            if environment_priority is not None:
+                env["GROUP_RENAME_PRIORITY"] = str(environment_priority)
             code = f"""
+import asyncio
 import json
+from pathlib import Path
 import nonebot
 nonebot.init(driver="~none", **{host!r})
-nonebot.require("nonebot_plugin_localstore")
-import nonebot_plugin_localstore as localstore
-path = localstore.get_config_file("nonebot_plugin_group_rename", "config.json")
-path.write_text(json.dumps({file_data!r}), encoding="utf-8")
 loaded = nonebot.load_plugin("nonebot_plugin_group_rename")
 assert loaded is not None
 plugin = loaded.module
@@ -128,6 +172,12 @@ assert plugin.group_rename_command.block is False
 assert plugin.rename_matcher.block is False
 assert plugin.config.group_rename_admin_only is False
 assert plugin.cooldown.seconds == 3
+from nonebot_plugin_group_rename.config import CONFIG_FILE
+assert CONFIG_FILE == Path({str(config_dir / 'config.json')!r})
+assert plugin.state.path == Path({str(data_dir / 'groups.json')!r})
+assert plugin.state.is_enabled("100")
+assert not plugin.state.is_enabled("999")
+asyncio.run(plugin.state.set_enabled("200", True))
 """
             result = subprocess.run(
                 [sys.executable, "-c", code], env=env,
@@ -135,6 +185,19 @@ assert plugin.cooldown.seconds == 3
                 capture_output=True, text=True, encoding="utf-8", timeout=30,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(
+                json.loads((config_dir / "config.json").read_text(encoding="utf-8")),
+                file_data,
+            )
+            self.assertEqual(
+                json.loads((data_dir / "groups.json").read_text(encoding="utf-8")),
+                {"enabled_groups": ["100", "200"]},
+            )
+            if plugin_directories:
+                self.assertEqual(
+                    json.loads((default_data_dir / "groups.json").read_text(encoding="utf-8")),
+                    {"enabled_groups": ["999"]},
+                )
 
     def test_both_matchers_use_host_priority(self) -> None:
         self._check_startup(
@@ -148,6 +211,29 @@ assert plugin.cooldown.seconds == 3
         self._check_startup(
             {}, {"group_rename_priority": 6, "group_rename_cooldown_seconds": 3}, 6,
         )
+
+    def test_plugin_specific_directories_control_config_and_state(self) -> None:
+        """专属目录优先于默认目录，状态修改必须写回专属文件。"""
+        self._check_startup(
+            {}, {"group_rename_priority": 6, "group_rename_cooldown_seconds": 3}, 6,
+            plugin_directories=True,
+        )
+
+    def test_real_host_sources_override_json_in_standard_order(self) -> None:
+        """实际 .env、环境变量、初始化参数依次覆盖，插件不改写用户配置。"""
+        for host, environment_priority, expected_priority in (
+            ({}, None, 6),
+            ({}, 8, 8),
+            ({"group_rename_priority": 9}, 8, 9),
+        ):
+            with self.subTest(expected_priority=expected_priority):
+                self._check_startup(
+                    host,
+                    {"group_rename_priority": 4, "group_rename_cooldown_seconds": 3},
+                    expected_priority,
+                    dotenv_priority=6,
+                    environment_priority=environment_priority,
+                )
 
 
 if __name__ == "__main__":

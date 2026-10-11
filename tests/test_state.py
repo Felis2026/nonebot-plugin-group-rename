@@ -13,6 +13,7 @@ try:
 except ValueError:
     nonebot.init(driver="~none")
 
+nonebot.require("nonebot_plugin_group_rename")
 from nonebot_plugin_group_rename.state import GroupState, StateLoadError
 
 

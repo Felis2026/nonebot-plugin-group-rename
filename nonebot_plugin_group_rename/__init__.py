@@ -34,8 +34,8 @@ __plugin_meta__ = PluginMetadata(
 
 # 启动时只合并一次配置，命令与自动改名共用同一份参数快照。
 config = get_plugin_config(Config)
-# 显式指定插件名，使数据目录不依赖当前模块的调用上下文。
-state = GroupState(localstore.get_data_file("nonebot_plugin_group_rename", "groups.json"))
+# 插件数据接口会遵守 localstore 的插件专属目录配置，不能改回通用接口。
+state = GroupState(localstore.get_plugin_data_file("groups.json"))
 cooldown = GroupCooldown(config.group_rename_cooldown_seconds)
 group_locks: dict[str, asyncio.Lock] = {}
 # 复用官方判定，兼容纯 ID 与 onebot:ID 两种 SUPERUSER 配置。

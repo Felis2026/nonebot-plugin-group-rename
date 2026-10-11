@@ -22,8 +22,8 @@ class _ConfigValues(BaseModel):
     group_rename_priority: int = Field(default=1, ge=0)
 
 
-# 根插件已 require(localstore)；路径只获取一次，不依赖 Bot 的启动目录。
-CONFIG_FILE = localstore.get_config_file("nonebot_plugin_group_rename", "config.json")
+# 由 localstore 识别当前插件，遵守宿主为本插件指定的配置目录；只获取一次。
+CONFIG_FILE = localstore.get_plugin_config_dir() / "config.json"
 _CONFIG_KEYS = {field.name for field in model_fields(_ConfigValues)}
 
 

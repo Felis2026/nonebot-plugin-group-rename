@@ -14,6 +14,7 @@ try:
 except ValueError:
     nonebot.init(driver="~none")
 
+nonebot.require("nonebot_plugin_group_rename")
 from nonebot.adapters.onebot.v11 import Adapter, Bot, GroupMessageEvent, PrivateMessageEvent
 from nonebot_plugin_group_rename.logic import GroupCooldown
 

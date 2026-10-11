@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python >= 3.10">
     <img src="https://img.shields.io/badge/NoneBot-2.4.4%2B-black" alt="NoneBot >= 2.4.4">
     <img src="https://img.shields.io/badge/Adapter-OneBot%20V11-orange" alt="OneBot V11">
-    <img src="https://img.shields.io/badge/Version-0.1.2-ff69b4" alt="Version 0.1.2">
+    <img src="https://img.shields.io/badge/Version-0.1.3-ff69b4" alt="Version 0.1.3">
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License"></a>
   </p>
 
@@ -139,11 +139,17 @@ SUPERUSER 权限依据 NoneBot 的 `SUPERUSERS` 配置判定，支持纯 ID 和 
 
 群开关状态另存在 `nonebot-plugin-localstore` 管理的数据目录下的 `groups.json`，不与参数配置混用；换设备时复制该状态文件，或在目标群重新执行 `/group_rename on`。
 
+配置与数据路径遵守 localstore 的 `localstore_plugin_config_dir`、`localstore_plugin_data_dir` 插件专属目录设置。
+
 如果启动时群开关文件无法读取，插件会关闭所有群并禁止修改开关，保留原文件；修复文件后重启 Bot 恢复使用。
 
 ---
 
 ## 📋 版本记录
+
+### 0.1.3
+
+- 使用 localstore 插件专属路径接口，遵守宿主为本插件指定的配置与数据目录。
 
 ### 0.1.2
 
