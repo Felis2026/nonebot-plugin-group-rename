@@ -9,7 +9,7 @@ from collections.abc import Iterable
 
 # 游戏房间号只接受 ASCII 数字，避免 Unicode 数字绕过精确匹配的忽略列表。
 DIGIT_PATTERN = re.compile(r"^[0-9]{5}$")
-# 旧群名继续清理所有连续五位及以上数字，包括旧版可能写入的全角数字。
+# 清理群名中的连续五位及以上数字，包括全角等 Unicode 数字。
 OLD_NUMBER_PATTERN = re.compile(r"\d{5,}")
 
 
@@ -63,7 +63,7 @@ class GroupCooldown:
         self._notified_groups: set[str] = set()
 
     def allow(self, group_id: str) -> bool:
-        """检查冷却并登记本次操作；由调用者在同群锁内调用。"""
+        """检查冷却并登记本次操作，在群锁内调用。"""
         now = time.monotonic()
         if now - self.last_by_group.get(group_id, float("-inf")) < self.seconds:
             return False
@@ -72,7 +72,7 @@ class GroupCooldown:
         return True
 
     def allow_notice(self, group_id: str) -> bool:
-        """同群本次冷却最多提示一次；调用者须在群锁内先确认操作被冷却拦住。"""
+        """操作被冷却拦截时，登记本周期的提示；在群锁内调用。"""
         if group_id in self._notified_groups:
             return False
         # 发送前登记，即使发送失败也不在本次冷却内反复尝试通知。
@@ -80,6 +80,6 @@ class GroupCooldown:
         return True
 
     def cancel_noop(self, group_id: str) -> None:
-        """当前群无需提交改名时撤销本次登记；调用者须持有同群锁。"""
+        """无需提交改名时撤销本次冷却登记，在群锁内调用。"""
         self.last_by_group.pop(group_id, None)
         self._notified_groups.discard(group_id)

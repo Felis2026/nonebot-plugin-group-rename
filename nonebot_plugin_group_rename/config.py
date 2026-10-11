@@ -22,7 +22,7 @@ class _ConfigValues(BaseModel):
     group_rename_priority: int = Field(default=1, ge=0)
 
 
-# 由 localstore 识别当前插件，遵守宿主为本插件指定的配置目录；只获取一次。
+# 配置文件位于 localstore 为本插件配置的目录。
 CONFIG_FILE = localstore.get_plugin_config_dir() / "config.json"
 _CONFIG_KEYS = {field.name for field in model_fields(_ConfigValues)}
 
@@ -44,7 +44,7 @@ def _load_json_config(path: Path) -> dict[str, Any]:
         if unknown_keys:
             raise ValueError(f"未知配置项: {', '.join(sorted(unknown_keys))}")
         # 宿主配置允许携带其他插件参数，只有独立 JSON 严格检查未知字段。
-        # 合并前校验，避免错误的 JSON 值被宿主覆盖后悄悄隐藏。
+        # 合并前校验 JSON，使宿主覆盖项不影响文件错误的检查。
         values = type_validate_python(_ConfigValues, data)
     except (OSError, ValueError) as exc:
         raise RuntimeError(f"读取改群名配置文件 {path} 失败: {exc}") from exc

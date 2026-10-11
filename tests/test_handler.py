@@ -116,7 +116,7 @@ class RenameHandlerTests(unittest.IsolatedAsyncioTestCase):
         send.assert_awaited_once_with("群名只剩车牌，无法清空；请先手动设置群名")
 
     async def test_unchanged_name_does_not_consume_cooldown(self) -> None:
-        """相同车牌和无法清空的群名都不能挡住随后的有效改名。"""
+        """群名未变化的操作不占用冷却，后续有效改名可立即执行。"""
         cases = (
             ("12345 讨论群", "12345", "67890 讨论群"),
             ("12345", "clear", "67890"),

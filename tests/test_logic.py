@@ -38,7 +38,7 @@ class MessageTriggerTests(unittest.TestCase):
         self.assertIsNone(message_trigger([("text", "12345")], ["12345"]))
 
     def test_room_codes_must_use_ascii_digits(self) -> None:
-        """Unicode 数字及混写不算房间号，不能用它们绕过 ASCII 忽略项。"""
+        """房间号仅接受 ASCII 数字，Unicode 数字及混写均不触发。"""
         for text in ("１２３４５", "١٢٣٤٥", "12３45"):
             with self.subTest(text=text):
                 self.assertIsNone(message_trigger([("text", text)], ["12345"]))
@@ -57,7 +57,7 @@ class GroupNameTests(unittest.TestCase):
         self.assertEqual(build_group_name("12345 群", "67890", 5), "67890")
 
     def test_clear_still_removes_old_unicode_number_runs(self) -> None:
-        """输入限制不改变旧群名的清理规则，旧版写入的 Unicode 数字仍可清空。"""
+        """群名中的连续五位及以上 Unicode 数字也会被清理。"""
         self.assertEqual(build_group_name("１２３４５١٢٣٤٥ 群", None, 30), "群")
 
 

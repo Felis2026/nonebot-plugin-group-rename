@@ -34,7 +34,7 @@ class GroupState:
         except FileNotFoundError:
             return set()
         except (OSError, ValueError, KeyError, TypeError) as exc:
-            # 空集合仅用于停止自动改名，不能拿它覆盖尚可人工修复的原文件。
+            # 读取失败时以空集合停用功能，并禁止写入以保留原文件。
             self.load_failed = True
             logger.error(f"读取改群名群开关文件 {self.path} 失败，已禁止写入；修复后请重启 Bot: {exc}")
             return set()

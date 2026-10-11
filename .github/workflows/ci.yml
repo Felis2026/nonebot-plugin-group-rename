@@ -34,10 +34,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        # 77.0.0 未发布到 PyPI；77.0.1 是 >=77 范围内的最低可安装版本。
+        # 77.0.1 是 setuptools>=77 范围内的最低可安装版本。
         run: python -m pip install . build wheel 'setuptools==77.0.1' '${{ matrix.pydantic-requirement }}'
       - name: Run tests
-        # runner 上下文在步骤级 env 可用，不能放在任务级 env 中。
+        # 测试数据放在 runner 的临时目录，步骤级 env 支持 runner 上下文。
         env:
           LOCALSTORE_CONFIG_DIR: ${{ runner.temp }}/group-rename-tests/config
           LOCALSTORE_DATA_DIR: ${{ runner.temp }}/group-rename-tests/data

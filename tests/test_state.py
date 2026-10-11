@@ -42,7 +42,7 @@ class GroupStateTests(unittest.IsolatedAsyncioTestCase):
     # ================================ 损坏文件保护与恢复 ================================ #
 
     async def test_corrupt_state_is_kept_and_all_toggle_writes_are_rejected(self) -> None:
-        """语法、结构或编码错误都不能被下一次开关操作覆盖。"""
+        """状态文件存在语法、结构或编码错误时，开关操作拒绝写入并保留原文件。"""
         for content in (b'{"enabled_groups": ["100",', b'{"enabled_groups": [100]}', b'[]', b'\xff'):
             with self.subTest(content=content), tempfile.TemporaryDirectory() as directory:
                 path = Path(directory) / "groups.json"
@@ -57,7 +57,7 @@ class GroupStateTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(path.with_name("groups.json.tmp").exists())
 
     async def test_unreadable_state_does_not_turn_into_an_empty_writable_state(self) -> None:
-        """权限或 I/O 故障也需要保护原文件，而非只处理 JSON 解析失败。"""
+        """状态文件读取失败时，开关操作拒绝写入并保留原文件。"""
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "groups.json"
             original = '{"enabled_groups": ["100"]}'

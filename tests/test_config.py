@@ -43,7 +43,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(Config(group_rename_max_length=5).group_rename_max_length, 5)
 
     def test_standard_loader_uses_defaults_without_json(self) -> None:
-        """NoneBot 全局参数不应误报成插件的未知字段。"""
+        """宿主包含全局参数时，插件仍正常加载默认配置。"""
         config = nonebot.get_plugin_config(Config)
         self.assertEqual(config.group_rename_max_length, 30)
         self.assertEqual(config.group_rename_priority, 1)
@@ -74,7 +74,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.group_rename_max_length, 20)
 
     def test_invalid_json_is_not_hidden_by_host_overrides(self) -> None:
-        """文件损坏、未知字段和非法参数均应报错，宿主覆盖也不能掩盖它们。"""
+        """JSON 格式或参数错误时加载失败，即使宿主提供了覆盖值。"""
         for contents in (
             "broken", "[]", "null", '{"unknown_key": true}',
             '{"group_rename_max_length": 4}',
@@ -117,7 +117,7 @@ class MatcherConfigTests(unittest.TestCase):
             data_dir = root / "custom-data" if plugin_directories else default_data_dir
             config_dir.mkdir(parents=True)
             data_dir.mkdir(parents=True)
-            # 启动前准备文件，用实际读写证明新接口仍能读取原有群记录。
+            # 准备插件启动前已有的配置和群开关记录。
             (config_dir / "config.json").write_text(json.dumps(file_data), encoding="utf-8")
             (data_dir / "groups.json").write_text(
                 json.dumps({"enabled_groups": ["100"]}), encoding="utf-8"
@@ -144,7 +144,7 @@ class MatcherConfigTests(unittest.TestCase):
                     {"nonebot_plugin_group_rename": str(data_dir)} if plugin_directories else {}
                 ),
             }
-            # 使用真实配置来源，避免直接传参的测试漏掉宿主加载器的优先级。
+            # 在新进程中读取 .env 和环境变量，验证宿主加载器的配置优先级。
             host = dict(host)
             env.pop("GROUP_RENAME_PRIORITY", None)
             if dotenv_priority is not None:
@@ -213,7 +213,7 @@ asyncio.run(plugin.state.set_enabled("200", True))
         )
 
     def test_plugin_specific_directories_control_config_and_state(self) -> None:
-        """专属目录优先于默认目录，状态修改必须写回专属文件。"""
+        """配置和状态从专属目录读取，状态修改写回同一目录。"""
         self._check_startup(
             {}, {"group_rename_priority": 6, "group_rename_cooldown_seconds": 3}, 6,
             plugin_directories=True,

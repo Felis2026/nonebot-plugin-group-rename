@@ -51,7 +51,7 @@ class PermissionTests(unittest.IsolatedAsyncioTestCase):
         self.bot = Bot(Adapter(self.driver), "9")
 
     async def test_chinese_command_alias_shares_matcher(self) -> None:
-        """中英文命令应注册在同一个响应器上，共用权限与处理逻辑。"""
+        """中英文命令注册在同一个响应器上，共用权限与处理逻辑。"""
         commands = {
             command
             for checker in plugin.group_rename_command.rule.checkers
@@ -95,7 +95,7 @@ class PermissionTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(await plugin.group_rename_command.permission(self.bot, event), expected)
 
     async def test_superuser_cannot_manage_group_switch_in_private_chat(self) -> None:
-        """复用 SUPERUSER 后仍须拒绝私聊，避免把群开关命令的范围扩大。"""
+        """SUPERUSER 的私聊消息不触发群开关或自动改名。"""
         data = model_dump(group_event("member", user_id=99))
         data.pop("group_id")
         data.update(message_type="private", sub_type="friend")
@@ -105,7 +105,7 @@ class PermissionTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(await plugin._is_rename_message(self.bot, event))
 
     async def test_handler_rechecks_admin_only_with_official_superuser_permission(self) -> None:
-        """直接进入处理器也必须再次校验身份，不能只依赖匹配阶段。"""
+        """启用管理员限制时，处理器校验成员身份并接受 SUPERUSER。"""
         config = SimpleNamespace(
             group_rename_admin_only=True, group_rename_ignore_patterns=[],
             group_rename_max_length=30, group_rename_enable_notify=False,

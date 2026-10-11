@@ -32,9 +32,9 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters={"~onebot.v11"},
 )
 
-# 启动时只合并一次配置，命令与自动改名共用同一份参数快照。
+# 启动时加载配置，群开关命令与自动改名共用这些参数。
 config = get_plugin_config(Config)
-# 插件数据接口会遵守 localstore 的插件专属目录配置，不能改回通用接口。
+# 群开关状态保存到 localstore 为本插件配置的数据目录。
 state = GroupState(localstore.get_plugin_data_file("groups.json"))
 cooldown = GroupCooldown(config.group_rename_cooldown_seconds)
 group_locks: dict[str, asyncio.Lock] = {}
@@ -43,7 +43,7 @@ group_management_permission = SUPERUSER | GROUP_ADMIN | GROUP_OWNER
 
 
 def _group_lock(group_id: str) -> asyncio.Lock:
-    """按群复用锁，让改名和群开关操作按到达顺序执行。"""
+    """获取群锁，串行处理同群的改名和开关操作。"""
     # 同一事件循环内创建锁的过程不含 await，不会为同群创建两把锁。
     if group_id not in group_locks:
         group_locks[group_id] = asyncio.Lock()
@@ -54,7 +54,7 @@ async def _is_group_admin_or_superuser(bot: Bot, event: Event) -> bool:
     """允许当前群管理员、群主及 NoneBot SUPERUSER 管理本群。"""
     if not isinstance(event, GroupMessageEvent):
         return False
-    # SUPERUSER 本身也允许私聊，必须先收紧到群消息，再检查身份。
+    # SUPERUSER 支持私聊，本插件的管理命令仅用于群聊。
     return await group_management_permission(bot, event)
 
 
@@ -79,7 +79,7 @@ async def _is_rename_message(bot: Bot, event: Event) -> bool:
 
 
 def _is_permission_failure(exc: ActionFailed) -> bool:
-    """只根据 OneBot 返回的权限字样识别权限失败，不猜测 retcode 的平台含义。"""
+    """根据 OneBot 返回的错误信息识别权限失败。"""
     # 不同 OneBot 实现的错误码并不统一，文字字段更适合做保守识别。
     details = " ".join(str(exc.info.get(key, "")) for key in ("wording", "message", "msg"))
     details = details.casefold()
@@ -148,7 +148,7 @@ async def handle_rename(bot: Bot, event: GroupMessageEvent) -> None:
 
     group_id = str(event.group_id)
     async with _group_lock(group_id):
-        # 匹配到执行之间可能关闭群开关或改动权限，必须再次检查。
+        # 排队期间群开关和成员权限可能变化，执行前重新校验。
         if not state.is_enabled(group_id):
             return
         if config.group_rename_admin_only and not await _is_group_admin_or_superuser(bot, event):
